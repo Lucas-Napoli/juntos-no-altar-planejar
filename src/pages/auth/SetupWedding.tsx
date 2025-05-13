@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +16,7 @@ import {
   FormMessage,
   FormDescription,
 } from '@/components/ui/form';
-import { toast } from 'sonner';
+import { toast } from '@/hooks/use-toast';
 import AuthLayout from '@/components/layouts/AuthLayout';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
@@ -24,6 +24,7 @@ import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon } from 'lucide-react';
 import { useStore } from '@/lib/store';
+import { useAuth } from '@/hooks/use-auth';
 
 // Form validation schema
 const setupSchema = z.object({
@@ -40,7 +41,9 @@ type SetupFormValues = z.infer<typeof setupSchema>;
 
 const SetupWedding = () => {
   const { user, wedding } = useStore();
+  const { setupWedding } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   // Redirect if user is not logged in
   if (!user) {
@@ -66,19 +69,17 @@ const SetupWedding = () => {
     setIsLoading(true);
     
     try {
-      toast.info('Implementação com Supabase pendente', {
-        description: 'A configuração do casamento será implementada em breve',
-      });
-      console.log('Wedding setup data:', data);
+      const wedding = await setupWedding(data.coupleName, data.weddingDate, data.partnerEmail);
       
-      // Here we would connect to Supabase using:
-      // 1. Create wedding record
-      // 2. Update store with wedding data
-      
+      if (wedding) {
+        navigate('/dashboard');
+      }
     } catch (error) {
       console.error('Setup error:', error);
-      toast.error('Erro ao configurar casamento', {
-        description: 'Por favor, tente novamente',
+      toast({
+        title: "Erro ao configurar casamento",
+        description: "Por favor, tente novamente",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);

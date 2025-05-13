@@ -1,8 +1,30 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useStore } from '@/lib/store';
+import { useStore, User, Wedding } from '@/lib/store';
 import { toast } from './use-toast';
+
+// Helper function to map Supabase user to our store User type
+const mapSupabaseUser = (supabaseUser: any): User => {
+  return {
+    id: supabaseUser.id,
+    name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'User',
+    email: supabaseUser.email
+  };
+};
+
+// Helper function to map database wedding to our store Wedding type
+const mapWeddingData = (weddingData: any): Wedding | null => {
+  if (!weddingData) return null;
+  
+  return {
+    id: weddingData.id,
+    coupleName: weddingData.couple_name,
+    weddingDate: weddingData.wedding_date,
+    ownerId: weddingData.owner_id,
+    partnerId: weddingData.partner_id
+  };
+};
 
 export const useAuth = () => {
   const { setUser, setWedding, user } = useStore();
@@ -16,8 +38,8 @@ export const useAuth = () => {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session?.user) {
-          // Get user data
-          setUser(session.user);
+          // Map and set user data
+          setUser(mapSupabaseUser(session.user));
           
           // Get wedding data for the user
           const { data: wedding } = await supabase
@@ -27,7 +49,7 @@ export const useAuth = () => {
             .maybeSingle();
           
           if (wedding) {
-            setWedding(wedding);
+            setWedding(mapWeddingData(wedding));
           }
         }
       } catch (error) {
@@ -48,7 +70,8 @@ export const useAuth = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session?.user) {
-          setUser(session.user);
+          // Map and set user data
+          setUser(mapSupabaseUser(session.user));
           
           // Get wedding data for the user
           const { data: wedding } = await supabase
@@ -58,7 +81,7 @@ export const useAuth = () => {
             .maybeSingle();
             
           if (wedding) {
-            setWedding(wedding);
+            setWedding(mapWeddingData(wedding));
           }
         } else {
           setUser(null);
@@ -168,14 +191,15 @@ export const useAuth = () => {
         console.log(`Invitation would be sent to ${partnerEmail}`);
       }
       
-      setWedding(wedding);
+      // Map and set the wedding data
+      setWedding(mapWeddingData(wedding));
       
       toast({
         title: "Casamento configurado",
         description: "Seu planejamento de casamento foi criado com sucesso!",
       });
       
-      return wedding;
+      return mapWeddingData(wedding);
     } catch (error: any) {
       toast({
         title: "Erro na configuração",
