@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -78,7 +77,11 @@ const GuestList = () => {
   const handleAddGuest = (data: GuestFormValues) => {
     const newGuest: Guest = {
       id: crypto.randomUUID(),
-      ...data,
+      name: data.name,  // This is now guaranteed to be a string from the form validation
+      email: data.email || '', // Ensure email is never undefined
+      phone: data.phone || '', // Ensure phone is never undefined
+      confirmed: data.confirmed,
+      companions: data.companions,
     };
     
     setGuests(prev => [...prev, newGuest]);
