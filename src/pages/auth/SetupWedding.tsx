@@ -45,6 +45,15 @@ const SetupWedding = () => {
   const navigate = useNavigate();
   const [isInitialized, setIsInitialized] = useState(false);
 
+  // Initialize form - IMPORTANT: Move this outside conditional blocks
+  const form = useForm<SetupFormValues>({
+    resolver: zodResolver(setupSchema),
+    defaultValues: {
+      coupleName: '',
+      partnerEmail: '',
+    },
+  });
+
   useEffect(() => {
     // Pequeno atraso para garantir que o estado foi inicializado
     const timer = setTimeout(() => {
@@ -53,6 +62,28 @@ const SetupWedding = () => {
     
     return () => clearTimeout(timer);
   }, []);
+
+  // Form submission handler
+  const onSubmit = async (data: SetupFormValues) => {
+    console.log("Enviando formulário de setup:", data);
+    const result = await setupWedding(data.coupleName, data.weddingDate, data.partnerEmail);
+    
+    if (result) {
+      console.log("Setup concluído com sucesso, navegando para dashboard");
+      toast({
+        title: "Configuração concluída",
+        description: "Seu casamento foi configurado com sucesso!",
+      });
+      navigate('/dashboard', { replace: true });
+    } else {
+      console.log("Falha no setup");
+      toast({
+        title: "Erro na configuração",
+        description: "Não foi possível configurar seu casamento. Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Mostrar carregamento até que o estado seja inicializado
   if (!isInitialized) {
@@ -76,37 +107,6 @@ const SetupWedding = () => {
   }
 
   console.log("SetupWedding: usuário logado, sem casamento, exibindo formulário de setup");
-
-  // Initialize form
-  const form = useForm<SetupFormValues>({
-    resolver: zodResolver(setupSchema),
-    defaultValues: {
-      coupleName: '',
-      partnerEmail: '',
-    },
-  });
-
-  // Form submission handler
-  const onSubmit = async (data: SetupFormValues) => {
-    console.log("Enviando formulário de setup:", data);
-    const result = await setupWedding(data.coupleName, data.weddingDate, data.partnerEmail);
-    
-    if (result) {
-      console.log("Setup concluído com sucesso, navegando para dashboard");
-      toast({
-        title: "Configuração concluída",
-        description: "Seu casamento foi configurado com sucesso!",
-      });
-      navigate('/dashboard', { replace: true });
-    } else {
-      console.log("Falha no setup");
-      toast({
-        title: "Erro na configuração",
-        description: "Não foi possível configurar seu casamento. Tente novamente.",
-        variant: "destructive",
-      });
-    }
-  };
 
   return (
     <AuthLayout 
