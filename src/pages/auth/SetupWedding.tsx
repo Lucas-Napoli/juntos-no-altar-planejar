@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -43,16 +43,39 @@ const SetupWedding = () => {
   const { user, wedding } = useStore();
   const { setupWedding, isLoading } = useAuth();
   const navigate = useNavigate();
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  useEffect(() => {
+    // Pequeno atraso para garantir que o estado foi inicializado
+    const timer = setTimeout(() => {
+      setIsInitialized(true);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Mostrar carregamento até que o estado seja inicializado
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-wedding-light to-background flex items-center justify-center">
+        <div className="animate-pulse text-wedding-secondary">Carregando...</div>
+      </div>
+    );
+  }
 
   // Redirect if user is not logged in
   if (!user) {
-    return <Navigate to="/login" />;
+    console.log("SetupWedding: usuário não está logado, redirecionando para login");
+    return <Navigate to="/login" replace />;
   }
 
   // Redirect if wedding already exists
   if (wedding) {
-    return <Navigate to="/dashboard" />;
+    console.log("SetupWedding: casamento já existe, redirecionando para dashboard");
+    return <Navigate to="/dashboard" replace />;
   }
+
+  console.log("SetupWedding: usuário logado, sem casamento, exibindo formulário de setup");
 
   // Initialize form
   const form = useForm<SetupFormValues>({
@@ -65,10 +88,23 @@ const SetupWedding = () => {
 
   // Form submission handler
   const onSubmit = async (data: SetupFormValues) => {
-    const wedding = await setupWedding(data.coupleName, data.weddingDate, data.partnerEmail);
+    console.log("Enviando formulário de setup:", data);
+    const result = await setupWedding(data.coupleName, data.weddingDate, data.partnerEmail);
     
-    if (wedding) {
-      navigate('/dashboard');
+    if (result) {
+      console.log("Setup concluído com sucesso, navegando para dashboard");
+      toast({
+        title: "Configuração concluída",
+        description: "Seu casamento foi configurado com sucesso!",
+      });
+      navigate('/dashboard', { replace: true });
+    } else {
+      console.log("Falha no setup");
+      toast({
+        title: "Erro na configuração",
+        description: "Não foi possível configurar seu casamento. Tente novamente.",
+        variant: "destructive",
+      });
     }
   };
 

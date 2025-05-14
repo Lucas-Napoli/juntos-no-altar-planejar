@@ -1,12 +1,23 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useStore } from '@/lib/store';
 import Sidebar from '@/components/navigation/Sidebar';
 import TopBar from '@/components/navigation/TopBar';
+import { Loader2 } from 'lucide-react';
 
 const DashboardLayout = () => {
   const { user, wedding, isSidebarOpen, setSidebarOpen } = useStore();
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Add a small delay to ensure the store is properly loaded
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   // Handle responsive sidebar
   useEffect(() => {
@@ -28,16 +39,30 @@ const DashboardLayout = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, [setSidebarOpen]);
 
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-wedding-secondary" />
+        <span className="ml-2">Carregando...</span>
+      </div>
+    );
+  }
+
   // Redirect to login if not authenticated
   if (!user) {
-    return <Navigate to="/login" />;
+    console.log("Não há usuário autenticado, redirecionando para login");
+    return <Navigate to="/login" replace />;
   }
 
   // Redirect to setup if no wedding data
   if (!wedding) {
-    return <Navigate to="/setup" />;
+    console.log("Usuário autenticado, mas sem dados de casamento, redirecionando para setup");
+    return <Navigate to="/setup" replace />;
   }
 
+  console.log("Usuário autenticado e dados de casamento presentes, exibindo dashboard");
+  
   return (
     <div className="h-screen flex flex-col">
       <TopBar />
