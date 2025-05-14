@@ -28,7 +28,7 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 const Login = () => {
-  const { login, isLoading } = useAuth();
+  const { login, setupWedding, isLoading } = useAuth();
   const navigate = useNavigate();
 
   // Initialize form
@@ -45,6 +45,32 @@ const Login = () => {
     const result = await login(data.email, data.password);
     
     if (result.user) {
+      // Verificar se há configurações de casamento pendentes
+      const pendingSetupStr = localStorage.getItem('pendingWeddingSetup');
+      
+      if (pendingSetupStr) {
+        try {
+          const pendingSetup = JSON.parse(pendingSetupStr);
+          
+          // Configurar casamento com os dados salvos
+          const setupResult = await setupWedding(
+            pendingSetup.coupleName, 
+            new Date(pendingSetup.weddingDate)
+          );
+          
+          if (setupResult) {
+            // Limpar dados pendentes após configuração bem-sucedida
+            localStorage.removeItem('pendingWeddingSetup');
+            toast({
+              title: "Configuração concluída",
+              description: "Seu casamento foi configurado com sucesso!",
+            });
+          }
+        } catch (error) {
+          console.error("Erro ao processar configuração pendente:", error);
+        }
+      }
+      
       navigate('/dashboard');
     }
   };

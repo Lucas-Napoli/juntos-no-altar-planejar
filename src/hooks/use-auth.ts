@@ -131,6 +131,7 @@ export const useAuth = () => {
   const register = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
     try {
+      // Note que o signUp não loga o usuário automaticamente quando email_confirmation é necessário
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -145,10 +146,19 @@ export const useAuth = () => {
         return { user: null, session: null };
       }
 
-      toast({
-        title: "Registro bem-sucedido",
-        description: "Conta criada com sucesso",
-      });
+      // Verificar se confirmação de email é necessária
+      if (data.session === null) {
+        toast({
+          title: "Verificação de email necessária",
+          description: "Um link de confirmação foi enviado para seu email. Por favor verifique seu email antes de fazer login.",
+          duration: 8000,
+        });
+      } else {
+        toast({
+          title: "Registro bem-sucedido",
+          description: "Conta criada com sucesso",
+        });
+      }
 
       return {
         user: data.user ? mapSupabaseUser(data.user) : null,

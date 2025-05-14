@@ -41,7 +41,7 @@ const registerSchema = z.object({
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 const Register = () => {
-  const { register, setupWedding, isLoading } = useAuth();
+  const { register, isLoading } = useAuth();
   const navigate = useNavigate();
 
   // Initialize form
@@ -62,12 +62,20 @@ const Register = () => {
       const { user } = await register(data.email, data.password);
       
       if (user) {
-        // Set up the wedding after successful registration
-        const wedding = await setupWedding(data.coupleName, data.weddingDate);
+        // Store wedding setup data in localStorage for later use after email verification
+        localStorage.setItem('pendingWeddingSetup', JSON.stringify({
+          coupleName: data.coupleName,
+          weddingDate: data.weddingDate.toISOString()
+        }));
         
-        if (wedding) {
-          navigate('/dashboard');
-        }
+        // Redirecionar para login com mensagem de verificação de email
+        toast({
+          title: "Registro realizado com sucesso!",
+          description: "Verifique seu email para confirmar seu cadastro antes de fazer login.",
+          duration: 8000,
+        });
+        
+        navigate('/login');
       }
     } catch (error) {
       console.error('Registration error:', error);
