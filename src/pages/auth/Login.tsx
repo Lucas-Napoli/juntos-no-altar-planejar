@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,8 +15,9 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { toast } from 'sonner';
+import { toast } from '@/hooks/use-toast';
 import AuthLayout from '@/components/layouts/AuthLayout';
+import useAuth from '@/hooks/use-auth';
 
 // Form validation schema
 const loginSchema = z.object({
@@ -27,7 +28,8 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 const Login = () => {
-  const [isLoading, setIsLoading] = useState(false);
+  const { login, isLoading } = useAuth();
+  const navigate = useNavigate();
 
   // Initialize form
   const form = useForm<LoginFormValues>({
@@ -40,27 +42,10 @@ const Login = () => {
 
   // Form submission handler
   const onSubmit = async (data: LoginFormValues) => {
-    setIsLoading(true);
+    const result = await login(data.email, data.password);
     
-    try {
-      toast.info('Implementação com Supabase pendente', {
-        description: 'A autenticação com o Supabase será implementada em breve',
-      });
-      console.log('Login data:', data);
-      
-      // Here we would connect to Supabase using:
-      // const { data, error } = await supabase.auth.signInWithPassword({
-      //   email: data.email,
-      //   password: data.password,
-      // });
-      
-    } catch (error) {
-      console.error('Login error:', error);
-      toast.error('Erro ao fazer login', {
-        description: 'Por favor, tente novamente',
-      });
-    } finally {
-      setIsLoading(false);
+    if (result.user) {
+      navigate('/dashboard');
     }
   };
 

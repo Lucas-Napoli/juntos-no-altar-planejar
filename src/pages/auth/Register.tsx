@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,14 +14,16 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
-import { toast } from 'sonner';
+import { toast } from '@/hooks/use-toast';
 import AuthLayout from '@/components/layouts/AuthLayout';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon } from 'lucide-react';
+import useAuth from '@/hooks/use-auth';
 
 // Form validation schema
 const registerSchema = z.object({
@@ -39,7 +41,8 @@ const registerSchema = z.object({
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 const Register = () => {
-  const [isLoading, setIsLoading] = useState(false);
+  const { register, setupWedding, isLoading } = useAuth();
+  const navigate = useNavigate();
 
   // Initialize form
   const form = useForm<RegisterFormValues>({
@@ -54,31 +57,25 @@ const Register = () => {
 
   // Form submission handler
   const onSubmit = async (data: RegisterFormValues) => {
-    setIsLoading(true);
-    
     try {
-      toast.info('Implementação com Supabase pendente', {
-        description: 'A autenticação com o Supabase será implementada em breve',
-      });
-      console.log('Registration data:', data);
+      // Register the user
+      const { user } = await register(data.email, data.password);
       
-      // Here we would connect to Supabase using:
-      // 1. Create user account
-      // const { data: authData, error: authError } = await supabase.auth.signUp({
-      //   email: data.email,
-      //   password: data.password,
-      // });
-      // 
-      // 2. Insert user data
-      // 3. Create wedding
-      
+      if (user) {
+        // Set up the wedding after successful registration
+        const wedding = await setupWedding(data.coupleName, data.weddingDate);
+        
+        if (wedding) {
+          navigate('/dashboard');
+        }
+      }
     } catch (error) {
       console.error('Registration error:', error);
-      toast.error('Erro ao registrar', {
-        description: 'Por favor, tente novamente',
+      toast({
+        title: "Erro ao registrar",
+        description: "Por favor, tente novamente",
+        variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 

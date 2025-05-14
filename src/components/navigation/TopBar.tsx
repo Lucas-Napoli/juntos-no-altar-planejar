@@ -12,13 +12,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import useAuth from '@/hooks/use-auth';
 
 const TopBar = () => {
-  const { user, toggleSidebar, resetStore } = useStore();
+  const { user, toggleSidebar } = useStore();
+  const { logout } = useAuth();
   
-  const handleLogout = () => {
-    resetStore();
-    // In a real app, we would also call Supabase auth.signOut() here
+  const handleLogout = async () => {
+    await logout();
   };
   
   const getInitials = (name: string) => {

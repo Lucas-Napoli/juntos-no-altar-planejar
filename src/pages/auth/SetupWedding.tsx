@@ -24,7 +24,7 @@ import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon } from 'lucide-react';
 import { useStore } from '@/lib/store';
-import { useAuth } from '@/hooks/use-auth';
+import useAuth from '@/hooks/use-auth';
 
 // Form validation schema
 const setupSchema = z.object({
@@ -41,8 +41,7 @@ type SetupFormValues = z.infer<typeof setupSchema>;
 
 const SetupWedding = () => {
   const { user, wedding } = useStore();
-  const { setupWedding } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
+  const { setupWedding, isLoading } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if user is not logged in
@@ -66,23 +65,10 @@ const SetupWedding = () => {
 
   // Form submission handler
   const onSubmit = async (data: SetupFormValues) => {
-    setIsLoading(true);
+    const wedding = await setupWedding(data.coupleName, data.weddingDate, data.partnerEmail);
     
-    try {
-      const wedding = await setupWedding(data.coupleName, data.weddingDate, data.partnerEmail);
-      
-      if (wedding) {
-        navigate('/dashboard');
-      }
-    } catch (error) {
-      console.error('Setup error:', error);
-      toast({
-        title: "Erro ao configurar casamento",
-        description: "Por favor, tente novamente",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
+    if (wedding) {
+      navigate('/dashboard');
     }
   };
 
