@@ -1,23 +1,28 @@
 
 import React, { useEffect, useState } from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { useStore } from '@/lib/store';
 import Sidebar from '@/components/navigation/Sidebar';
 import TopBar from '@/components/navigation/TopBar';
 import { Loader2 } from 'lucide-react';
+import useAuth from '@/hooks/use-auth';
 
 const DashboardLayout = () => {
   const { user, wedding, isSidebarOpen, setSidebarOpen } = useStore();
-  const [isLoading, setIsLoading] = useState(true);
+  const { isLoading: authLoading } = useAuth();
+  const [isReady, setIsReady] = useState(false);
+  const navigate = useNavigate();
 
-  // Add a small delay to ensure the store is properly loaded
+  // Wait for auth state to stabilize before making decisions
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 500);
-    
-    return () => clearTimeout(timer);
-  }, []);
+    if (!authLoading) {
+      const timer = setTimeout(() => {
+        setIsReady(true);
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [authLoading]);
 
   // Handle responsive sidebar
   useEffect(() => {
@@ -39,8 +44,8 @@ const DashboardLayout = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, [setSidebarOpen]);
 
-  // Show loading state
-  if (isLoading) {
+  // Show loading state while auth state is being determined
+  if (!isReady || authLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-wedding-secondary" />

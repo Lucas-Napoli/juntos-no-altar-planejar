@@ -18,6 +18,14 @@ export type User = {
   email: string;
 };
 
+// Define default state
+const defaultState = {
+  user: null,
+  wedding: null,
+  isLoading: false,
+  isSidebarOpen: true,
+};
+
 // Define Store Types
 interface AppState {
   // Auth
@@ -42,10 +50,7 @@ export const useStore = create<AppState>()(
   persist(
     (set) => ({
       // Initial state
-      user: null,
-      wedding: null,
-      isLoading: false,
-      isSidebarOpen: true,
+      ...defaultState,
       
       // Actions
       setUser: (user) => set({ user }),
@@ -53,7 +58,7 @@ export const useStore = create<AppState>()(
       setLoading: (isLoading) => set({ isLoading }),
       toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
       setSidebarOpen: (open) => set({ isSidebarOpen: open }),
-      resetStore: () => set({ user: null, wedding: null }),
+      resetStore: () => set({ ...defaultState }),
     }),
     {
       name: 'planejajunto-storage',

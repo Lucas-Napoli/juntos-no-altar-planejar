@@ -1,49 +1,74 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useStore } from '@/lib/store';
 import { fetchUserWedding, setupWedding as setupWeddingService } from '@/services/wedding-service';
-import { 
-  getCurrentUser, 
-  setupAuthListener, 
-  loginWithPassword, 
-  registerUser, 
-  logoutUser 
-} from '@/services/auth-service';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { User, Session } from '@supabase/supabase-js';
+import { mapSupabaseUser } from '@/lib/mappers/supabase-mappers';
 
 export const useAuth = () => {
-  const { setUser, setWedding, user } = useStore();
+  const { setUser, setWedding, user, resetStore } = useStore();
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [session, setSession] = useState<Session | null>(null);
 
+  // Initialize auth state
   useEffect(() => {
     let isMounted = true;
     
-    // Check for active session on mount
     const initAuth = async () => {
-      setIsLoading(true);
       try {
-        const userData = await getCurrentUser();
-        
-        if (userData && isMounted) {
-          // Set user data
-          setUser(userData);
-          
-          console.log("Usuário autenticado:", userData);
-          
-          // Get wedding data for the user
-          const wedding = await fetchUserWedding(userData.id);
-          
-          if (wedding && isMounted) {
-            console.log("Dados do casamento carregados:", wedding);
+        // First set up auth state listener
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, currentSession) => {
+            if (!isMounted) return;
+
+            console.log('Auth state change:', event, currentSession?.user?.id);
+            setSession(currentSession);
+
+            if (currentSession?.user) {
+              const mappedUser = mapSupabaseUser(currentSession.user);
+              setUser(mappedUser);
+              
+              // Use setTimeout to avoid recursive calls in Supabase client
+              setTimeout(async () => {
+                if (!isMounted) return;
+                const wedding = await fetchUserWedding(mappedUser.id);
+                if (isMounted) {
+                  console.log('Wedding data loaded:', wedding);
+                  setWedding(wedding);
+                  setIsLoading(false);
+                }
+              }, 0);
+            } else {
+              resetStore();
+              setIsLoading(false);
+            }
+          }
+        );
+
+        // Then check for existing session
+        const { data: { session: existingSession } } = await supabase.auth.getSession();
+        if (existingSession?.user && isMounted) {
+          const mappedUser = mapSupabaseUser(existingSession.user);
+          setUser(mappedUser);
+
+          // Load wedding data
+          const wedding = await fetchUserWedding(mappedUser.id);
+          if (isMounted) {
             setWedding(wedding);
-          } else {
-            console.log("Nenhum dado de casamento encontrado para o usuário");
-            setWedding(null);
           }
         }
+
+        if (isMounted) {
+          setIsLoading(false);
+        }
+
+        return () => {
+          subscription.unsubscribe();
+        };
       } catch (error) {
         console.error('Auth initialization error:', error);
-      } finally {
         if (isMounted) {
           setIsLoading(false);
         }
@@ -52,65 +77,111 @@ export const useAuth = () => {
 
     initAuth();
 
-    // Listen for auth changes
-    const subscription = setupAuthListener(async (userData) => {
-      if (userData && isMounted) {
-        // Set user data
-        setUser(userData);
-        
-        // Get wedding data for the user
-        const wedding = await fetchUserWedding(userData.id);
-        
-        if (wedding && isMounted) {
-          setWedding(wedding);
-        } else {
-          setWedding(null);
-        }
-      } else if (isMounted) {
-        setUser(null);
-        setWedding(null);
-      }
-    });
-
     return () => {
       isMounted = false;
-      subscription.unsubscribe();
     };
-  }, [setUser, setWedding]);
+  }, [setUser, setWedding, resetStore]);
 
-  const login = async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      const result = await loginWithPassword(email, password);
-      return result;
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        toast({
+          title: "Falha no login",
+          description: error.message || "Verifique suas credenciais e tente novamente",
+          variant: "destructive",
+        });
+        return { user: null, session: null };
+      }
+
+      return {
+        user: data.user ? mapSupabaseUser(data.user) : null,
+        session: data.session
+      };
+    } catch (error: any) {
+      toast({
+        title: "Falha no login",
+        description: error.message || "Ocorreu um erro inesperado",
+        variant: "destructive",
+      });
+      return { user: null, session: null };
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const register = async (email: string, password: string) => {
+  const register = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      const result = await registerUser(email, password);
-      return result;
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (error) {
+        toast({
+          title: "Falha no registro",
+          description: error.message || "Não foi possível criar sua conta",
+          variant: "destructive",
+        });
+        return { user: null, session: null };
+      }
+
+      toast({
+        title: "Registro bem-sucedido",
+        description: "Verifique seu email para confirmar seu cadastro",
+      });
+
+      return {
+        user: data.user ? mapSupabaseUser(data.user) : null,
+        session: data.session
+      };
+    } catch (error: any) {
+      toast({
+        title: "Falha no registro",
+        description: error.message || "Ocorreu um erro inesperado",
+        variant: "destructive",
+      });
+      return { user: null, session: null };
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     setIsLoading(true);
     try {
-      await logoutUser();
-      // Garantir que os estados sejam limpos depois do logout
-      setUser(null);
-      setWedding(null);
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        toast({
+          title: "Erro ao sair",
+          description: error.message || "Não foi possível encerrar sua sessão",
+          variant: "destructive",
+        });
+        return false;
+      }
+      
+      // Clear application state
+      resetStore();
+      return true;
+    } catch (error: any) {
+      toast({
+        title: "Erro ao sair",
+        description: error.message || "Ocorreu um erro inesperado",
+        variant: "destructive",
+      });
+      return false;
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [resetStore]);
 
-  const setupWedding = async (coupleName: string, weddingDate: Date, partnerEmail?: string) => {
+  const setupWedding = useCallback(async (coupleName: string, weddingDate: Date, partnerEmail?: string) => {
     if (!user) {
       toast({
         title: "Erro",
@@ -139,7 +210,7 @@ export const useAuth = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user, setWedding]);
 
   return {
     login,

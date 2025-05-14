@@ -1,8 +1,13 @@
 
+// This file is kept for backward compatibility
+// New code should import supabase directly and use its auth methods
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { mapSupabaseUser } from '@/lib/mappers/supabase-mappers';
 import { User } from '@/lib/store';
+
+// Note: These functions are now deprecated in favor of direct Supabase auth calls
+// They are kept for backward compatibility
 
 export const getSession = async () => {
   try {
@@ -16,7 +21,7 @@ export const getSession = async () => {
 };
 
 export const getCurrentUser = async (): Promise<User | null> => {
-  const session = await getSession();
+  const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) return null;
   return mapSupabaseUser(session.user);
 };
@@ -91,6 +96,7 @@ export const setupAuthListener = (
 ) => {
   const { data: { subscription } } = supabase.auth.onAuthStateChange(
     async (event, session) => {
+      console.log("Auth state event:", event);
       if (session?.user) {
         onAuthChange(mapSupabaseUser(session.user));
       } else {

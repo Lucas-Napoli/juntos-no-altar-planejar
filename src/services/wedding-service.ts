@@ -42,6 +42,13 @@ export const setupWedding = async (
     console.log("Configurando casamento para usuário:", userId);
     console.log("Dados:", { coupleName, weddingDate, partnerEmail });
     
+    // Check if a wedding already exists for this user
+    const existingWedding = await fetchUserWedding(userId);
+    if (existingWedding) {
+      console.log("Casamento já existe para este usuário, retornando dados existentes");
+      return existingWedding;
+    }
+    
     // Create the wedding
     const { data: wedding, error } = await supabase
       .from('weddings')

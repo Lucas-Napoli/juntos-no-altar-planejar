@@ -45,7 +45,7 @@ const SetupWedding = () => {
   const navigate = useNavigate();
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Initialize form - IMPORTANT: Move this outside conditional blocks
+  // Initialize form - IMPORTANT: Always outside conditional blocks
   const form = useForm<SetupFormValues>({
     resolver: zodResolver(setupSchema),
     defaultValues: {
@@ -53,15 +53,6 @@ const SetupWedding = () => {
       partnerEmail: '',
     },
   });
-
-  useEffect(() => {
-    // Pequeno atraso para garantir que o estado foi inicializado
-    const timer = setTimeout(() => {
-      setIsInitialized(true);
-    }, 500);
-    
-    return () => clearTimeout(timer);
-  }, []);
 
   // Form submission handler
   const onSubmit = async (data: SetupFormValues) => {
@@ -84,6 +75,15 @@ const SetupWedding = () => {
       });
     }
   };
+
+  useEffect(() => {
+    // Pequeno atraso para garantir que o estado foi inicializado
+    const timer = setTimeout(() => {
+      setIsInitialized(true);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   // Mostrar carregamento até que o estado seja inicializado
   if (!isInitialized) {
