@@ -18,9 +18,11 @@ export const useAuth = () => {
     
     const initAuth = async () => {
       try {
+        setIsLoading(true);
+        
         // First set up auth state listener
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (event, currentSession) => {
+          (event, currentSession) => {
             if (!isMounted) return;
 
             console.log('Auth state change:', event, currentSession?.user?.id);
@@ -33,11 +35,18 @@ export const useAuth = () => {
               // Use setTimeout to avoid recursive calls in Supabase client
               setTimeout(async () => {
                 if (!isMounted) return;
-                const wedding = await fetchUserWedding(mappedUser.id);
-                if (isMounted) {
-                  console.log('Wedding data loaded:', wedding);
-                  setWedding(wedding);
-                  setIsLoading(false);
+                try {
+                  const wedding = await fetchUserWedding(mappedUser.id);
+                  if (isMounted) {
+                    console.log('Wedding data loaded:', wedding);
+                    setWedding(wedding);
+                  }
+                } catch (error) {
+                  console.error('Error fetching wedding data:', error);
+                } finally {
+                  if (isMounted) {
+                    setIsLoading(false);
+                  }
                 }
               }, 0);
             } else {
@@ -54,9 +63,13 @@ export const useAuth = () => {
           setUser(mappedUser);
 
           // Load wedding data
-          const wedding = await fetchUserWedding(mappedUser.id);
-          if (isMounted) {
-            setWedding(wedding);
+          try {
+            const wedding = await fetchUserWedding(mappedUser.id);
+            if (isMounted) {
+              setWedding(wedding);
+            }
+          } catch (error) {
+            console.error('Error fetching wedding data:', error);
           }
         }
 
@@ -134,7 +147,7 @@ export const useAuth = () => {
 
       toast({
         title: "Registro bem-sucedido",
-        description: "Verifique seu email para confirmar seu cadastro",
+        description: "Conta criada com sucesso",
       });
 
       return {
@@ -199,11 +212,11 @@ export const useAuth = () => {
       if (wedding) {
         console.log("Casamento configurado com sucesso:", wedding);
         setWedding(wedding);
+        return wedding;
       } else {
         console.log("Falha ao configurar casamento");
+        return null;
       }
-      
-      return wedding;
     } catch (error) {
       console.error("Erro ao configurar casamento:", error);
       return null;

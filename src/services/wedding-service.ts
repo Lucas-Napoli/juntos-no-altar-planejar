@@ -8,6 +8,11 @@ export const fetchUserWedding = async (userId: string): Promise<Wedding | null> 
   try {
     console.log("Buscando dados de casamento para usuário:", userId);
     
+    if (!userId) {
+      console.error('ID de usuário não fornecido para busca de casamento');
+      return null;
+    }
+    
     const { data: wedding, error } = await supabase
       .from('weddings')
       .select('*')
@@ -41,6 +46,11 @@ export const setupWedding = async (
   try {
     console.log("Configurando casamento para usuário:", userId);
     console.log("Dados:", { coupleName, weddingDate, partnerEmail });
+    
+    if (!userId) {
+      console.error('ID de usuário não fornecido para configuração de casamento');
+      throw new Error("ID de usuário é obrigatório");
+    }
     
     // Check if a wedding already exists for this user
     const existingWedding = await fetchUserWedding(userId);

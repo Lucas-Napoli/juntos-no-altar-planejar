@@ -22,7 +22,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Loader2 } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import useAuth from '@/hooks/use-auth';
 
@@ -41,11 +41,12 @@ type SetupFormValues = z.infer<typeof setupSchema>;
 
 const SetupWedding = () => {
   const { user, wedding } = useStore();
-  const { setupWedding, isLoading } = useAuth();
+  const { setupWedding, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Initialize form - IMPORTANT: Always outside conditional blocks
+  // Initialize form with default values
   const form = useForm<SetupFormValues>({
     resolver: zodResolver(setupSchema),
     defaultValues: {
@@ -56,28 +57,51 @@ const SetupWedding = () => {
 
   // Form submission handler
   const onSubmit = async (data: SetupFormValues) => {
-    console.log("Enviando formulário de setup:", data);
-    const result = await setupWedding(data.coupleName, data.weddingDate, data.partnerEmail);
-    
-    if (result) {
-      console.log("Setup concluído com sucesso, navegando para dashboard");
+    if (!user) {
       toast({
-        title: "Configuração concluída",
-        description: "Seu casamento foi configurado com sucesso!",
-      });
-      navigate('/dashboard', { replace: true });
-    } else {
-      console.log("Falha no setup");
-      toast({
-        title: "Erro na configuração",
-        description: "Não foi possível configurar seu casamento. Tente novamente.",
+        title: "Erro",
+        description: "É necessário estar logado para configurar um casamento.",
         variant: "destructive",
       });
+      navigate('/login');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      console.log("Enviando formulário de setup:", data);
+      const result = await setupWedding(data.coupleName, data.weddingDate, data.partnerEmail);
+      
+      if (result) {
+        console.log("Setup concluído com sucesso, navegando para dashboard");
+        toast({
+          title: "Configuração concluída",
+          description: "Seu casamento foi configurado com sucesso!",
+        });
+        navigate('/dashboard', { replace: true });
+      } else {
+        console.log("Falha no setup");
+        toast({
+          title: "Erro na configuração",
+          description: "Não foi possível configurar seu casamento. Tente novamente.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao submeter formulário:", error);
+      toast({
+        title: "Erro no processamento",
+        description: "Ocorreu um erro ao processar sua solicitação.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   useEffect(() => {
-    // Pequeno atraso para garantir que o estado foi inicializado
+    // Small delay to ensure the state is initialized
     const timer = setTimeout(() => {
       setIsInitialized(true);
     }, 500);
@@ -85,11 +109,14 @@ const SetupWedding = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Mostrar carregamento até que o estado seja inicializado
-  if (!isInitialized) {
+  // Show loading screen until the state is initialized
+  if (!isInitialized || authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-wedding-light to-background flex items-center justify-center">
-        <div className="animate-pulse text-wedding-secondary">Carregando...</div>
+        <div className="flex items-center">
+          <Loader2 className="h-8 w-8 animate-spin text-wedding-secondary" />
+          <span className="ml-2">Carregando...</span>
+        </div>
       </div>
     );
   }
@@ -187,8 +214,8 @@ const SetupWedding = () => {
             )}
           />
           
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? 'Configurando...' : 'Começar a planejar'}
+          <Button type="submit" className="w-full" disabled={isSubmitting || authLoading}>
+            {isSubmitting ? 'Configurando...' : 'Começar a planejar'}
           </Button>
         </form>
       </Form>
